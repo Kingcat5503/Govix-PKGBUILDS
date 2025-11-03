@@ -24,11 +24,17 @@ jobs:
         pacman -Sy --noconfirm archlinux-keyring
         pacman -Syu --noconfirm --needed base-devel git sudo
 
+        # Add your custom repo
+        echo '[garch-repo]' >> /etc/pacman.conf
+        echo 'SigLevel = Optional TrustAll' >> /etc/pacman.conf
+        echo 'Server = https://gitlab.com/Kingcat5503/garch-repo/-/raw/main/$arch' >> /etc/pacman.conf
+        pacman -Sy
+
         # Create non-root builder user
         useradd -m builder
         echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-        # Prepare a writable workspace for builder
+        # Prepare workspace for builder
         mkdir -p /home/builder/workspace
         cp -r "$GITHUB_WORKSPACE"/* /home/builder/workspace/
         chown -R builder:builder /home/builder/workspace
@@ -42,6 +48,20 @@ jobs:
             if [ -f "$d/PKGBUILD" ]; then
               echo "Building package in $d"
               cd "$d"
+
+              # Ensure deps can be installed
+              sudo pacman -Syu --noconfirm --needed base-devel
+
+              # Try to install all deps listed in PKGBUILD
+              source PKGBUILD
+              if [ ! -z "${depends[*]}" ]; then
+                sudo pacman -S --noconfirm --needed "${depends[@]}" || true
+              fi
+              if [ ! -z "${makedepends[*]}" ]; then
+                sudo pacman -S --noconfirm --needed "${makedepends[@]}" || true
+              fi
+
+              # Now build the package
               makepkg -sf --noconfirm
               cd ..
             fi
