@@ -14,30 +14,34 @@ jobs:
       options: --privileged
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Install base-devel
+    - name: Install base-devel and dependencies
       run: |
         pacman -Sy --noconfirm archlinux-keyring
-        pacman -S --noconfirm --needed base-devel
+        pacman -Syu --noconfirm --needed base-devel git
 
-    - name: Build Packages
+    - name: Build all PKGBUILDs
       run: |
+        set -e
         for d in */; do
           if [ -f "$d/PKGBUILD" ]; then
             echo "Building package in $d"
             cd "$d"
-            makepkg -s --noconfirm
+            makepkg -sf --noconfirm
             cd ..
           fi
         done
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+    - name: Upload built packages
+      if: success() && always()  # only runs if previous steps succeeded
+      uses: actions/upload-artifact@v4
       with:
         name: packages
         path: |
           **/*.pkg.tar.zst
           **/*.pkg.tar.xz
+        if-no-files-found: error
