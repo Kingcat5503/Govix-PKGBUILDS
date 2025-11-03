@@ -24,18 +24,20 @@ jobs:
         pacman -Sy --noconfirm archlinux-keyring
         pacman -Syu --noconfirm --needed base-devel git sudo
 
-        # Create non-root build user
+        # Create non-root builder user
         useradd -m builder
         echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-        # Give ownership of repo to builder
-        chown -R builder:builder /__w
+        # Prepare a writable workspace for builder
+        mkdir -p /home/builder/workspace
+        cp -r "$GITHUB_WORKSPACE"/* /home/builder/workspace/
+        chown -R builder:builder /home/builder/workspace
 
-    - name: Build all PKGBUILDs
+    - name: Build all PKGBUILDs as builder
       run: |
         sudo -u builder bash -c '
           set -e
-          cd "$GITHUB_WORKSPACE"
+          cd /home/builder/workspace
           for d in */; do
             if [ -f "$d/PKGBUILD" ]; then
               echo "Building package in $d"
@@ -52,6 +54,6 @@ jobs:
       with:
         name: packages
         path: |
-          **/*.pkg.tar.zst
-          **/*.pkg.tar.xz
+          /home/builder/workspace/**/*.pkg.tar.zst
+          /home/builder/workspace/**/*.pkg.tar.xz
         if-no-files-found: error
