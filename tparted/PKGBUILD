@@ -1,0 +1,32 @@
+# Maintainer: Kaushik B <govixcomputers@gmail.com>
+
+pkgname=tparted
+pkgver=2025.10.30_1
+pkgrel=1
+pkgdesc="TUI frontend for GNU parted — with LUKS support"
+arch=('x86_64')
+url="https://github.com/Kagamma/tparted"
+license=('GPL3')
+depends=('parted' 'util-linux')
+optdepends=(
+  'dosfstools: FAT support'
+  'ntfs-3g: NTFS support'
+  'btrfs-progs: BTRFS support'
+  'xfsprogs: XFS support'
+  'cryptsetup: LUKS partition encryption support'
+)
+makedepends=('make' 'gcc')
+source=("linux_x86-64_tparted_${pkgver}.tar.gz")
+sha256sums=('SKIP')
+build() {
+  cd "$srcdir"
+  # If prebuilt binary, no need to compile
+  echo "Skipping build — using precompiled binary."
+}
+
+package() {
+  cd "$srcdir"
+  # Adjust this if the binary is inside a folder
+  install -Dm755 tparted "$pkgdir/usr/bin/tparted" || \
+  install -Dm755 linux_x86-64_tparted_${pkgver}/tparted "$pkgdir/usr/bin/tparted"
+}

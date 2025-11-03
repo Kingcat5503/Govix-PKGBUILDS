@@ -1,0 +1,43 @@
+name: Build Packages
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install base-devel
+      run: |
+        pacman -Sy --noconfirm archlinux-keyring
+        pacman -S --noconfirm --needed base-devel
+
+    - name: Build Packages
+      run: |
+        for d in */; do
+          if [ -f "$d/PKGBUILD" ]; then
+            echo "Building package in $d"
+            cd "$d"
+            makepkg -s --noconfirm
+            cd ..
+          fi
+        done
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: packages
+        path: |
+          **/*.pkg.tar.zst
+          **/*.pkg.tar.xz
