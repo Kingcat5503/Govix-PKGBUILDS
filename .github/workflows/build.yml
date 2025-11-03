@@ -19,25 +19,35 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install base-devel and dependencies
+    - name: Setup build environment
       run: |
         pacman -Sy --noconfirm archlinux-keyring
-        pacman -Syu --noconfirm --needed base-devel git
+        pacman -Syu --noconfirm --needed base-devel git sudo
+
+        # Create non-root build user
+        useradd -m builder
+        echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+        # Give ownership of repo to builder
+        chown -R builder:builder /__w
 
     - name: Build all PKGBUILDs
       run: |
-        set -e
-        for d in */; do
-          if [ -f "$d/PKGBUILD" ]; then
-            echo "Building package in $d"
-            cd "$d"
-            makepkg -sf --noconfirm
-            cd ..
-          fi
-        done
+        sudo -u builder bash -c '
+          set -e
+          cd "$GITHUB_WORKSPACE"
+          for d in */; do
+            if [ -f "$d/PKGBUILD" ]; then
+              echo "Building package in $d"
+              cd "$d"
+              makepkg -sf --noconfirm
+              cd ..
+            fi
+          done
+        '
 
     - name: Upload built packages
-      if: success() && always()  # only runs if previous steps succeeded
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: packages
